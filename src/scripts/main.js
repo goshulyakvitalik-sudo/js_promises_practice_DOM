@@ -1,15 +1,25 @@
 'use strict';
 
+let notification = document.querySelector('[data-qa="notification"]');
+
+if (!notification) {
+  notification = document.createElement('div');
+  notification.setAttribute('data-qa', 'notification');
+  document.body.appendChild(notification);
+}
+
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
 window.firstPromise = new Promise((resolve, reject) => {
   const timeoutId = setTimeout(() => {
-    reject(new Error('First promise was rejected in 3 seconds if not clicked'));
+    reject(new Error('First promise was rejected'));
   }, 3000);
 
   const clickHandler = (e) => {
     if (e.button === 0) {
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', clickHandler);
-      resolve('First promise was resolved on a left click in the document');
+      resolve('First promise was resolved');
     }
   };
 
@@ -31,22 +41,17 @@ window.secondPromise = new Promise((resolve) => {
   document.addEventListener('mousedown', clickHandler);
 });
 
-window.secondPromise.then((message) => {
-  showNotification('success', message);
-});
+window.secondPromise
+  .then((message) => showNotification('success', message))
+  .catch(() => showNotification('error', 'Second promise error'));
 
 window.thirdPromise = new Promise((resolve) => {
   let left = false;
   let right = false;
 
   const clickHandler = (e) => {
-    if (e.button === 0) {
-      left = true;
-    }
-
-    if (e.button === 2) {
-      right = true;
-    }
+    if (e.button === 0) left = true;
+    if (e.button === 2) right = true;
 
     if (left && right) {
       resolve('Third promise was resolved');
@@ -57,9 +62,9 @@ window.thirdPromise = new Promise((resolve) => {
   document.addEventListener('mousedown', clickHandler);
 });
 
-window.thirdPromise.then((message) => {
-  showNotification('success', message);
-});
+window.thirdPromise
+  .then((message) => showNotification('success', message))
+  .catch(() => showNotification('error', 'Third promise error'));
 
 function showNotification(type, message) {
   const div = document.querySelector('[data-qa="notification"]');
