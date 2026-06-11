@@ -1,29 +1,34 @@
 'use strict';
 
-let notification = document.querySelector('[data-qa="notification"]');
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
 
-if (!notification) {
-  notification = document.createElement('div');
-  notification.setAttribute('data-qa', 'notification');
-  document.body.appendChild(notification);
+function showNotification(type, message) {
+  const notification = document.createElement('div');
+
+  notification.dataset.qa = 'notification';
+  notification.classList.add(type);
+  notification.textContent = message;
+
+  document.body.append(notification);
 }
 
-document.addEventListener('contextmenu', (e) => e.preventDefault());
-
 window.firstPromise = new Promise((resolve, reject) => {
+  const clickHandler = () => {
+    clearTimeout(timeoutId);
+    document.removeEventListener('click', clickHandler);
+
+    resolve('First promise was resolved');
+  };
+
   const timeoutId = setTimeout(() => {
+    document.removeEventListener('click', clickHandler);
+
     reject(new Error('First promise was rejected'));
   }, 3000);
 
-  const clickHandler = (e) => {
-    if (e.button === 0) {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', clickHandler);
-      resolve('First promise was resolved');
-    }
-  };
-
-  document.addEventListener('mousedown', clickHandler);
+  document.addEventListener('click', clickHandler);
 });
 
 window.firstPromise
@@ -31,45 +36,58 @@ window.firstPromise
   .catch((error) => showNotification('error', error.message));
 
 window.secondPromise = new Promise((resolve) => {
-  const clickHandler = (e) => {
-    if (e.button === 0 || e.button === 2) {
-      resolve('Second promise was resolved');
-      document.removeEventListener('mousedown', clickHandler);
-    }
+  const leftClickHandler = () => {
+    cleanup();
+    resolve('Second promise was resolved');
   };
 
-  document.addEventListener('mousedown', clickHandler);
+  const rightClickHandler = (e) => {
+    e.preventDefault();
+    cleanup();
+    resolve('Second promise was resolved');
+  };
+
+  function cleanup() {
+    document.removeEventListener('click', leftClickHandler);
+    document.removeEventListener('contextmenu', rightClickHandler);
+  }
+
+  document.addEventListener('click', leftClickHandler);
+  document.addEventListener('contextmenu', rightClickHandler);
 });
 
-window.secondPromise
-  .then((message) => showNotification('success', message))
-  .catch(() => showNotification('error', 'Second promise error'));
+window.secondPromise.then((message) => {
+  showNotification('success', message);
+});
 
 window.thirdPromise = new Promise((resolve) => {
-  let left = false;
-  let right = false;
+  let leftClicked = false;
+  let rightClicked = false;
 
-  const clickHandler = (e) => {
-    if (e.button === 0) left = true;
-    if (e.button === 2) right = true;
-
-    if (left && right) {
-      resolve('Third promise was resolved');
-      document.removeEventListener('mousedown', clickHandler);
-    }
+  const leftClickHandler = () => {
+    leftClicked = true;
+    checkResolve();
   };
 
-  document.addEventListener('mousedown', clickHandler);
+  const rightClickHandler = (e) => {
+    e.preventDefault();
+    rightClicked = true;
+    checkResolve();
+  };
+
+  function checkResolve() {
+    if (leftClicked && rightClicked) {
+      document.removeEventListener('click', leftClickHandler);
+      document.removeEventListener('contextmenu', rightClickHandler);
+
+      resolve('Third promise was resolved');
+    }
+  }
+
+  document.addEventListener('click', leftClickHandler);
+  document.addEventListener('contextmenu', rightClickHandler);
 });
 
-window.thirdPromise
-  .then((message) => showNotification('success', message))
-  .catch(() => showNotification('error', 'Third promise error'));
-
-function showNotification(type, message) {
-  const div = document.querySelector('[data-qa="notification"]');
-
-  div.className = '';
-  div.classList.add(type);
-  div.textContent = message;
-}
+window.thirdPromise.then((message) => {
+  showNotification('success', message);
+});
